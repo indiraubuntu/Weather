@@ -1,26 +1,56 @@
-# APP Weather
-
 import streamlit as st
-import pandas as pd
-import numpy as np
-import streamlit.components.v1 as components
-
+import requests
+import pydeck as pdk
 
 st.header('Méteo France')
 
 col1, col2 = st.columns(2)
 
 with col1:
-   st.selectbox('Entrez ville', ['Carcassone', 'Lyon'])
-with col2:
-   st.button('GO', [])
+    city = st.text_input("Entrez une ville :")
 
-components.html(
-        """
-        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d396196.0038535864!2d-74.0059726300296!3d40.71277579459063!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2sca!4v1585325999776!5m2!1sen!2sca" width="800" height="600" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
-        """,
-    width=800,
-    height=600,
-    )
+# Default coordinates for the map when no city is inputted
+default_coords = {'lat': 48.8566, 'lon': 2.3522}  # Defaults to Paris, but you can adjust as needed
 
-## "selmane"
+if col2.button('GO') and city:
+    # Fetching data from the OpenWeather API
+    API_KEY = st.secrets["general"]["API_KEY"]
+    BASE_URL = "http://api.openweathermap.org/data/2.5/forecast"
+    response = requests.get(BASE_URL, params={"q": city, "units": "metric", "appid": API_KEY})
+    data = response.json()
+
+    # Extracting the required details
+    coords = data['city']['coord']
+    today = data['list'][0]['main']['temp']
+    tomorrow = data['list'][8]['main']['temp']
+    day_after_tomorrow = data['list'][16]['main']['temp']
+
+    # Displaying the temperatures
+    st.write(f"Today's temperature in {city}: {today}°C")
+    st.write(f"Tomorrow's temperature in {city}: {tomorrow}°C")
+    st.write(f"Day after tomorrow's temperature in {city}: {day_after_tomorrow}°C")
+else:
+    coords = default_coords
+
+# Displaying the map using pydeck
+map_layer = pdk.Layer(
+    "ScatterplotLayer",
+    data={
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [coords['lon'], coords['lat']]
+            }
+        }]
+    },
+    get_position="[coordinates[0], coordinates[1]]",
+    get_radius=10000,  # Adjusted to make the point look like a pinpoint
+    get_fill_color="[0, 0, 255]",  # Blue color
+    pickable=True,
+    opacity=0.6
+)
+
+st.pydeck_chart(pdk.Deck(layers=[map_layer], initial_view_state={"latitude": coords['lat'], "longitude": coords['lon'], "zoom": 10, "pitch": 50}))
+
