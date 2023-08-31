@@ -4,6 +4,16 @@ import pydeck as pdk
 
 st.header('Méteo France')
 
+def fetch_weather_data(city, API_KEY):
+        BASE_URL = "http://api.openweathermap.org/data/2.5/forecast"
+        response = requests.get(BASE_URL, params={"q": city, "units": "metric", "appid": API_KEY})
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+
+
 col1, col2 = st.columns(2)
 
 with col1:
@@ -15,16 +25,7 @@ default_coords = {'lat': 48.8566, 'lon': 2.3522}  # Defaults to Paris, but you c
 if col2.button('GO') and city:
     # Fetching data from the OpenWeather API
     API_KEY = st.secrets["general"]["API_KEY"]
-    
-    def fetch_weather_data(city, API_KEY):
-        BASE_URL = "http://api.openweathermap.org/data/2.5/forecast"
-        response = requests.get(BASE_URL, params={"q": city, "units": "metric", "appid": API_KEY})
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
-
+   
     data = fetch_weather_data(city, API_KEY)   # Assign the result to the variable data
 
     if data:
